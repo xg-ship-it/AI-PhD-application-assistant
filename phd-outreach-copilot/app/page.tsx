@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Lead, makeLeadId, upsertLead } from "./lib/leads";
 
 type Result = {
   subject: string;
@@ -11,6 +12,7 @@ type Result = {
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [savedLeadId, setSavedLeadId] = useState<string | null>(null);
   const [form, setForm] = useState({
     professorName: "Prof. John Smith",
     school: "University of Example",
@@ -30,6 +32,7 @@ export default function HomePage() {
   async function onGenerate() {
     setLoading(true);
     setResult(null);
+    setSavedLeadId(null);
     try {
       const res = await fetch("/api/email/generate", {
         method: "POST",
@@ -48,16 +51,33 @@ export default function HomePage() {
 
   function saveToDashboard() {
     if (!result) return;
-    const raw = localStorage.getItem("outreach_items");
-    const arr = raw ? JSON.parse(raw) : [];
-    arr.unshift({
+
+    const leadId = makeLeadId(form.professorName, form.school);
+    const now = new Date().toISOString();
+
+    const lead: Lead = {
+      id: leadId,
       professorName: form.professorName,
       school: form.school,
-      subject: result.subject,
+      researchSummary: form.researchSummary,
       status: "draft",
-      createdAt: new Date().toISOString(),
-    });
-    localStorage.setItem("outreach_items", JSON.stringify(arr));
+      createdAt: now,
+      updatedAt: now,
+      nextFollowUpAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      matchScore: result.personalizationScore,
+      emails: [
+        {
+          id: `${leadId}-initial`,
+          type: "initial",
+          subject: result.subject,
+          body: result.emailBody,
+          createdAt: now,
+        },
+      ],
+    };
+
+    upsertLead(lead);
+    setSavedLeadId(leadId);
     alert("Saved to dashboard");
   }
 
@@ -72,7 +92,7 @@ export default function HomePage() {
 
         <div className="grid md:grid-cols-2 gap-6">
           <section className="bg-white rounded-2xl shadow p-5 space-y-4">
-            <h1 className="text-2xl font-bold">PhD Outreach Copilot (v0.2)</h1>
+            <h1 className="text-2xl font-bold">PhD Outreach Copilot (v0.3)</h1>
             <p className="text-sm text-gray-600">
               输入你的背景和导师信息，生成可直接发送的套磁邮件。
             </p>
@@ -140,7 +160,14 @@ export default function HomePage() {
                     {result.emailBody}
                   </pre>
                 </div>
-                <button className="border rounded px-3 py-2" onClick={saveToDashboard}>Save to Dashboard</button>
+                <div className="flex items-center gap-3">
+                  <button className="border rounded px-3 py-2" onClick={saveToDashboard}>Save to Dashboard</button>
+                  {savedLeadId && (
+                    <a className="underline text-sm" href={`/professor/${savedLeadId}`}>
+                      Open Detail
+                    </a>
+                  )}
+                </div>
               </div>
             )}
           </section>
