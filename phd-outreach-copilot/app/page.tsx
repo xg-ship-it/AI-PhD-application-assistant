@@ -22,17 +22,107 @@ const DISCIPLINE_PRESETS: Record<string, { researchSummary: string; applicantBac
     applicantBackground:
       "I have quantitative training and project experience in econometrics, data analysis, and empirical research design.",
   },
+  Finance: {
+    researchSummary:
+      "The group works on asset pricing, corporate finance, and empirical financial econometrics.",
+    applicantBackground:
+      "I have background in quantitative modeling, financial data analysis, and evidence-based hypothesis testing.",
+  },
+  Management: {
+    researchSummary:
+      "The department studies strategy, innovation, organizations, and data-driven managerial decision making.",
+    applicantBackground:
+      "I have project/research experience related to organizations, innovation, and rigorous mixed-method analysis.",
+  },
   Psychology: {
     researchSummary:
       "The lab studies cognitive processes using experimental design, behavioral methods, and statistical modeling.",
     applicantBackground:
       "I have experience in experimental study design, data collection/analysis, and translating findings into research questions.",
   },
+  Sociology: {
+    researchSummary:
+      "The group investigates social behavior, inequality, institutions, and contemporary social change.",
+    applicantBackground:
+      "I have research experience using survey/qualitative/quantitative approaches to analyze social questions.",
+  },
+  "Political Science": {
+    researchSummary:
+      "The department focuses on comparative politics, political behavior, governance, and policy processes.",
+    applicantBackground:
+      "I have training in policy and political analysis with evidence-based argumentation and data interpretation.",
+  },
+  Education: {
+    researchSummary:
+      "The group studies learning sciences, educational interventions, and evidence-based pedagogy.",
+    applicantBackground:
+      "I have experience in educational research, intervention design, and learner-outcome analysis.",
+  },
+  Law: {
+    researchSummary:
+      "The school explores legal theory, comparative law, and law-and-society questions across jurisdictions.",
+    applicantBackground:
+      "I have strong legal/policy analysis skills and research experience in doctrinal and interdisciplinary inquiry.",
+  },
+  History: {
+    researchSummary:
+      "The department studies historical change through archival, textual, and comparative historical methods.",
+    applicantBackground:
+      "I have experience in source-based analysis, historiography, and building coherent historical arguments.",
+  },
+  Philosophy: {
+    researchSummary:
+      "The group works on ethics, epistemology, philosophy of mind, and analytic/continental traditions.",
+    applicantBackground:
+      "I have training in rigorous argumentation, conceptual analysis, and critical synthesis of philosophical literature.",
+  },
+  Literature: {
+    researchSummary:
+      "The department studies literary theory, textual interpretation, and transnational/cultural literatures.",
+    applicantBackground:
+      "I have strong close-reading, comparative analysis, and theoretically informed writing skills.",
+  },
+  Linguistics: {
+    researchSummary:
+      "The group investigates syntax, semantics, phonology, pragmatics, and language variation/change.",
+    applicantBackground:
+      "I have coursework/research background in linguistic analysis and empirical language data interpretation.",
+  },
+  Biology: {
+    researchSummary:
+      "The lab studies molecular/cellular/organismal biology with hypothesis-driven experimental methods.",
+    applicantBackground:
+      "I have experience in lab research, experimental design, and quantitative analysis of biological data.",
+  },
+  Chemistry: {
+    researchSummary:
+      "The group focuses on synthetic/physical/materials chemistry with mechanistic and analytical approaches.",
+    applicantBackground:
+      "I have lab and analytical experience with experimental workflows, data interpretation, and scientific communication.",
+  },
+  Physics: {
+    researchSummary:
+      "The lab works on theoretical/experimental physics with strong emphasis on modeling and measurement.",
+    applicantBackground:
+      "I have quantitative and research experience in physical modeling, data analysis, and reproducible methodology.",
+  },
+  Mathematics: {
+    researchSummary:
+      "The department studies pure/applied mathematics including analysis, algebra, probability, and optimization.",
+    applicantBackground:
+      "I have strong mathematical foundations and project/research experience in proof-based and computational work.",
+  },
   "Public Health": {
     researchSummary:
       "The group works on population health, intervention evaluation, and evidence-based health policy research.",
     applicantBackground:
       "I have research experience in health data analysis, evidence synthesis, and policy-relevant interpretation.",
+  },
+  Interdisciplinary: {
+    researchSummary:
+      "The program supports interdisciplinary research integrating methods and theories across multiple fields.",
+    applicantBackground:
+      "I have cross-domain project experience and can connect methods from different disciplines to tackle complex problems.",
   },
 };
 

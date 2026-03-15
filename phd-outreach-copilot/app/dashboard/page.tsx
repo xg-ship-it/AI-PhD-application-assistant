@@ -47,6 +47,15 @@ export default function DashboardPage() {
     }).catch(() => {});
   }
 
+  function removeLead(id: string, professorName: string) {
+    const ok = confirm(`Delete lead for ${professorName}? This cannot be undone.`);
+    if (!ok) return;
+
+    const next = items.filter((x) => x.id !== id);
+    save(next);
+    fetch(`/api/leads/${id}`, { method: "DELETE" }).catch(() => {});
+  }
+
   const filtered = useMemo(() => {
     return items.filter((x) => {
       const byStatus = statusFilter === "all" ? true : x.status === statusFilter;
@@ -167,7 +176,15 @@ export default function DashboardPage() {
                         </button>
                       ))}
                     </div>
-                    <a className="underline text-xs" href={`/professor/${it.id}`}>Open detail</a>
+                    <div className="flex items-center justify-between">
+                      <a className="underline text-xs" href={`/professor/${it.id}`}>Open detail</a>
+                      <button
+                        className="text-xs border border-red-300 text-red-600 rounded px-2 py-0.5"
+                        onClick={() => removeLead(it.id, it.professorName)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
