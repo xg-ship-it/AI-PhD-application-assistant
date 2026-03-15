@@ -51,6 +51,7 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [scoreMap, setScoreMap] = useState<Record<number, any>>({});
+  const [sources, setSources] = useState<Array<{ title: string; url: string; source?: string }>>([]);
 
   async function onSearch() {
     setLoading(true);
@@ -63,6 +64,7 @@ export default function DiscoverPage() {
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "search failed");
       setCandidates(data.candidates || []);
+      setSources(data.sourcesUsed || []);
       setScoreMap({});
     } catch (e: any) {
       alert(e.message);
@@ -150,6 +152,19 @@ export default function DiscoverPage() {
             />
           </label>
         </div>
+
+        {!!sources.length && (
+          <section className="bg-white rounded-xl shadow p-3 text-xs">
+            <div className="font-semibold mb-1">Search sources used</div>
+            <div className="space-y-1 max-h-44 overflow-auto">
+              {sources.map((s, i) => (
+                <div key={i}>
+                  [{s.source || "web"}] <a className="underline" href={s.url} target="_blank">{s.title || s.url}</a>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="space-y-3">
           {candidates.map((c, idx) => (
