@@ -16,6 +16,8 @@ export default function DashboardPage() {
   const [items, setItems] = useState<Lead[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | LeadStatus>("all");
   const [keywordFilter, setKeywordFilter] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
     setItems(loadLeads());
@@ -29,6 +31,12 @@ export default function DashboardPage() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   function save(next: Lead[]) {
     setItems(next);
@@ -48,12 +56,25 @@ export default function DashboardPage() {
   }
 
   function removeLead(id: string, professorName: string) {
-    const ok = confirm(`Delete lead for ${professorName}? This cannot be undone.`);
-    if (!ok) return;
+    if (pendingDeleteId !== id) {
+      setPendingDeleteId(id);
+      setToast(`Click delete again to confirm: ${professorName}`);
+      return;
+    }
 
     const next = items.filter((x) => x.id !== id);
     save(next);
-    fetch(`/api/leads/${id}`, { method: "DELETE" }).catch(() => {});
+    setPendingDeleteId(null);
+    setToast(`Deleted lead: ${professorName}`);
+
+    fetch(`/api/leads/${id}`, { method: "DELETE" })
+      .then((r) => (r.ok ? null : r.json()))
+      .then((err) => {
+        if (err?.error) setToast(`Deleted locally; remote delete failed: ${err.error}`);
+      })
+      .catch(() => {
+        setToast("Deleted locally; remote delete failed");
+      });
   }
 
   const filtered = useMemo(() => {
@@ -115,6 +136,8 @@ export default function DashboardPage() {
         </div>
         <h1 className="text-2xl font-bold">Outreach Pipeline Dashboard</h1>
         <p className="text-sm text-gray-600">支持状态流转、导师详情、自动提醒、筛选统计。</p>
+
+        {toast && <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded text-sm">{toast}</div>}
 
         <section className="bg-white rounded-xl shadow p-4 grid md:grid-cols-5 gap-3 text-sm">
           <div>Total: <b>{stats.total}</b></div>
@@ -179,10 +202,10 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between">
                       <a className="underline text-xs" href={`/professor/${it.id}`}>Open detail</a>
                       <button
-                        className="text-xs border border-red-300 text-red-600 rounded px-2 py-0.5"
+                        className={`text-xs rounded px-2 py-0.5 border ${pendingDeleteId === it.id ? "border-red-600 bg-red-600 text-white" : "border-red-300 text-red-600"}`}
                         onClick={() => removeLead(it.id, it.professorName)}
                       >
-                        Delete
+                        {pendingDeleteId === it.id ? "Confirm delete" : "Delete"}
                       </button>
                     </div>
                   </div>
