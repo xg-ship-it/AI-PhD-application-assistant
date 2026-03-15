@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Lead, makeLeadId, upsertLead } from "./lib/leads";
 
 type Result = {
@@ -9,25 +9,80 @@ type Result = {
   personalizationScore: number;
 };
 
+const DISCIPLINE_PRESETS: Record<string, { researchSummary: string; applicantBackground: string }> = {
+  "Computer Science": {
+    researchSummary:
+      "The lab focuses on machine learning, large language models, and reliable AI systems with strong empirical evaluation.",
+    applicantBackground:
+      "I have research and project experience in ML, model development, evaluation, and reproducible experimentation.",
+  },
+  Economics: {
+    researchSummary:
+      "The group studies applied microeconomics, policy evaluation, and quantitative causal inference methods.",
+    applicantBackground:
+      "I have quantitative training and project experience in econometrics, data analysis, and empirical research design.",
+  },
+  Psychology: {
+    researchSummary:
+      "The lab studies cognitive processes using experimental design, behavioral methods, and statistical modeling.",
+    applicantBackground:
+      "I have experience in experimental study design, data collection/analysis, and translating findings into research questions.",
+  },
+  "Public Health": {
+    researchSummary:
+      "The group works on population health, intervention evaluation, and evidence-based health policy research.",
+    applicantBackground:
+      "I have research experience in health data analysis, evidence synthesis, and policy-relevant interpretation.",
+  },
+};
+
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [savedLeadId, setSavedLeadId] = useState<string | null>(null);
+  const [toast, setToast] = useState("");
   const [form, setForm] = useState({
     professorName: "Prof. John Smith",
     school: "University of Example",
-    researchSummary:
-      "The lab focuses on multimodal machine learning, medical imaging, and trustworthy AI for clinical decision support.",
+    researchSummary: "",
     applicantName: "Xiangyu Guo",
-    applicantBackground:
-      "I am a final-year MSc student in Computer Science. My recent project built a multimodal model for chest X-ray report generation, improving BLEU by 8.7% over baseline. I have experience with PyTorch, transformers, and uncertainty estimation.",
+    applicantBackground: "",
     targetProgram: "PhD in Computer Science (Fall 2027)",
     language: "en",
     tone: "formal",
+    discipline: "Computer Science",
   });
 
-  const onChange = (k: string, v: string) =>
-    setForm((s) => ({ ...s, [k]: v }));
+  useEffect(() => {
+    const p = DISCIPLINE_PRESETS[form.discipline];
+    if (!form.researchSummary) {
+      setForm((s) => ({ ...s, researchSummary: p?.researchSummary || s.researchSummary }));
+    }
+    if (!form.applicantBackground) {
+      setForm((s) => ({ ...s, applicantBackground: p?.applicantBackground || s.applicantBackground }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const onChange = (k: string, v: string) => setForm((s) => ({ ...s, [k]: v }));
+
+  function applyDisciplinePreset(v: string) {
+    const p = DISCIPLINE_PRESETS[v];
+    setForm((s) => ({
+      ...s,
+      discipline: v,
+      researchSummary: p?.researchSummary || s.researchSummary,
+      applicantBackground: p?.applicantBackground || s.applicantBackground,
+      targetProgram: `PhD in ${v}`,
+    }));
+    setToast(`Applied ${v} preset`);
+  }
 
   async function onGenerate() {
     setLoading(true);
@@ -50,6 +105,7 @@ export default function HomePage() {
           applicantName: form.applicantName,
         })
       );
+      setToast("Email generated");
     } catch (e: any) {
       alert(e.message);
     } finally {
@@ -93,7 +149,7 @@ export default function HomePage() {
     }).catch(() => {});
 
     setSavedLeadId(leadId);
-    alert("Saved to dashboard");
+    setToast("Saved to dashboard");
   }
 
   return (
@@ -105,23 +161,42 @@ export default function HomePage() {
           <a href="/dashboard" className="underline">Dashboard</a>
         </div>
 
+        {toast && <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded">{toast}</div>}
+
         <div className="grid md:grid-cols-2 gap-6">
           <section className="bg-white rounded-2xl shadow p-5 space-y-4">
             <h1 className="text-2xl font-bold">PhD Outreach Copilot (v0.3)</h1>
-            <p className="text-sm text-gray-600">
-              输入你的背景和导师信息，生成可直接发送的套磁邮件。
-            </p>
+            <p className="text-sm text-gray-600">用模板先起草，再按导师具体信息微调即可。</p>
+
+            <div>
+              <label className="text-sm font-medium">Discipline preset</label>
+              <div className="flex gap-2 mt-1">
+                <select
+                  className="w-full border rounded-lg p-2"
+                  value={form.discipline}
+                  onChange={(e) => onChange("discipline", e.target.value)}
+                >
+                  {Object.keys(DISCIPLINE_PRESETS).map((x) => (
+                    <option key={x} value={x}>{x}</option>
+                  ))}
+                </select>
+                <button className="border rounded px-3" onClick={() => applyDisciplinePreset(form.discipline)}>
+                  Apply
+                </button>
+              </div>
+            </div>
 
             {[
-              ["professorName", "Professor Name"],
-              ["school", "School"],
-              ["targetProgram", "Target Program"],
-              ["applicantName", "Applicant Name"],
-            ].map(([k, label]) => (
+              ["professorName", "Professor Name", "e.g. Prof. Emily Carter"],
+              ["school", "School", "e.g. University of Warwick"],
+              ["targetProgram", "Target Program", "e.g. PhD in Economics (Fall 2027)"],
+              ["applicantName", "Applicant Name", "Your full name"],
+            ].map(([k, label, placeholder]) => (
               <div key={k}>
                 <label className="text-sm font-medium">{label}</label>
                 <input
                   className="w-full mt-1 border rounded-lg p-2"
+                  placeholder={placeholder}
                   value={(form as any)[k]}
                   onChange={(e) => onChange(k, e.target.value)}
                 />
@@ -132,6 +207,7 @@ export default function HomePage() {
               <label className="text-sm font-medium">Professor Research Summary</label>
               <textarea
                 className="w-full mt-1 border rounded-lg p-2 h-28"
+                placeholder="What does this professor/lab focus on? Mention methods/topics."
                 value={form.researchSummary}
                 onChange={(e) => onChange("researchSummary", e.target.value)}
               />
@@ -141,9 +217,27 @@ export default function HomePage() {
               <label className="text-sm font-medium">Applicant Background</label>
               <textarea
                 className="w-full mt-1 border rounded-lg p-2 h-32"
+                placeholder="Briefly mention your strongest project, method, and measurable result."
                 value={form.applicantBackground}
                 onChange={(e) => onChange("applicantBackground", e.target.value)}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-sm font-medium">Language</label>
+                <select className="w-full mt-1 border rounded-lg p-2" value={form.language} onChange={(e) => onChange("language", e.target.value)}>
+                  <option value="en">English</option>
+                  <option value="zh">Chinese</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Tone</label>
+                <select className="w-full mt-1 border rounded-lg p-2" value={form.tone} onChange={(e) => onChange("tone", e.target.value)}>
+                  <option value="formal">Formal</option>
+                  <option value="warm">Warm</option>
+                </select>
+              </div>
             </div>
 
             <button
@@ -171,9 +265,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Email Body</div>
-                  <pre className="whitespace-pre-wrap text-sm bg-gray-50 border rounded-lg p-3">
-                    {result.emailBody}
-                  </pre>
+                  <pre className="whitespace-pre-wrap text-sm bg-gray-50 border rounded-lg p-3">{result.emailBody}</pre>
                 </div>
                 <div className="flex items-center gap-3">
                   <button className="border rounded px-3 py-2" onClick={saveToDashboard}>Save to Dashboard</button>

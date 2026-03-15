@@ -90,6 +90,13 @@ function parseCsvText(csv: string): Candidate[] {
     .filter((x) => x.name && x.researchSummary);
 }
 
+function recommendationText(score?: MatchScore) {
+  if (!score) return "Run score to see recommendation";
+  const a = score.strengths?.[0] || "Potential research alignment";
+  const b = score.suggestedAngle || "Good candidate for customized outreach.";
+  return `${a}. ${b}`;
+}
+
 function ScoreCard({ score }: { score: MatchScore }) {
   const v = Math.max(0, Math.min(100, score.overallScore || 0));
   return (
@@ -156,6 +163,8 @@ export default function DiscoverPage() {
   const [targetProgram, setTargetProgram] = useState("");
   const [loading, setLoading] = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
+  const [scoringAll, setScoringAll] = useState(false);
+  const [scoredCount, setScoredCount] = useState(0);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [scoreMap, setScoreMap] = useState<Record<number, MatchScore>>({});
   const [scoreProgressMap, setScoreProgressMap] = useState<Record<number, number>>({});
@@ -182,6 +191,14 @@ export default function DiscoverPage() {
     () => `Example: ${selectedArea} ${selectedRegion} PhD supervisor`,
     [selectedArea, selectedRegion]
   );
+
+  const rankedCandidates = useMemo(() => {
+    return [...candidates].sort((a, b) => {
+      const ia = candidates.indexOf(a);
+      const ib = candidates.indexOf(b);
+      return (scoreMap[ib]?.overallScore || -1) - (scoreMap[ia]?.overallScore || -1);
+    });
+  }, [candidates, scoreMap]);
 
   function applyTemplateQuery() {
     setQuery(`${selectedArea} ${selectedRegion} PhD supervisor`);
@@ -245,8 +262,26 @@ export default function DiscoverPage() {
       setScoreProgressMap((m) => ({ ...m, [idx]: 0 }));
     }, 250);
 
-    if (!r.ok) return alert(data.error || "score failed");
+    if (!r.ok) throw new Error(data.error || "score failed");
     setScoreMap((s) => ({ ...s, [idx]: data }));
+    return data as MatchScore;
+  }
+
+  async function scoreAll() {
+    if (!candidates.length) return;
+    setScoringAll(true);
+    setScoredCount(0);
+    try {
+      for (let i = 0; i < candidates.length; i++) {
+        await scoreOne(candidates[i], i);
+        setScoredCount(i + 1);
+      }
+      setToast(`Scored all ${candidates.length} candidates`);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setScoringAll(false);
+    }
   }
 
   function saveCandidate(c: Candidate, idx: number) {
@@ -362,9 +397,12 @@ export default function DiscoverPage() {
             }}>Load from Compose</button>
           </div>
 
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center flex-wrap">
             <button onClick={onSearch} disabled={loading} className="bg-black text-white rounded px-4 py-2">
               {loading ? "Searching..." : "Search Professors"}
+            </button>
+            <button onClick={scoreAll} disabled={scoringAll || !candidates.length} className="border rounded px-4 py-2">
+              {scoringAll ? `Scoring all... (${scoredCount}/${candidates.length})` : "Score All Candidates"}
             </button>
             <label className="text-sm border rounded px-3 py-2 cursor-pointer">
               Import CSV
@@ -404,30 +442,37 @@ export default function DiscoverPage() {
         )}
 
         <div className="space-y-3">
-          {candidates.map((c, idx) => (
-            <div key={idx} className="bg-white rounded-xl shadow p-4 space-y-2">
-              <div className="font-semibold">{c.name} {c.school ? `· ${c.school}` : ""}</div>
-              <div className="text-sm text-gray-700">{c.researchSummary}</div>
-              {c.url && <a className="text-sm underline" href={c.url} target="_blank">{c.url}</a>}
-              <div className="text-xs text-gray-500">{(c.keywords || []).join(", ")}</div>
+          {rankedCandidates.map((c) => {
+            const idx = candidates.indexOf(c);
+            return (
+              <div key={`${c.name}-${idx}`} className="bg-white rounded-xl shadow p-4 space-y-2">
+                <div className="font-semibold">{c.name} {c.school ? `· ${c.school}` : ""}</div>
+                <div className="text-sm text-gray-700">{c.researchSummary}</div>
+                {c.url && <a className="text-sm underline" href={c.url} target="_blank">{c.url}</a>}
+                <div className="text-xs text-gray-500">{(c.keywords || []).join(", ")}</div>
 
-              <div className="flex gap-2">
-                <button onClick={() => scoreOne(c, idx)} className="border rounded px-3 py-1 text-sm">Score Match</button>
-                <button onClick={() => saveCandidate(c, idx)} className="border rounded px-3 py-1 text-sm">Save Lead</button>
-              </div>
-
-              {(scoreProgressMap[idx] || 0) > 0 && (
-                <div>
-                  <div className="text-xs text-gray-600 mb-1">Analyzing match...</div>
-                  <div className="h-2 rounded bg-gray-200 overflow-hidden">
-                    <div className="h-full bg-black transition-all" style={{ width: `${scoreProgressMap[idx]}%` }} />
-                  </div>
+                <div className="text-xs bg-blue-50 border border-blue-200 text-blue-800 px-2 py-1 rounded">
+                  Why recommended: {recommendationText(scoreMap[idx])}
                 </div>
-              )}
 
-              {scoreMap[idx] && <ScoreCard score={scoreMap[idx]} />}
-            </div>
-          ))}
+                <div className="flex gap-2">
+                  <button onClick={() => scoreOne(c, idx).catch((e) => alert(e.message))} className="border rounded px-3 py-1 text-sm">Score Match</button>
+                  <button onClick={() => saveCandidate(c, idx)} className="border rounded px-3 py-1 text-sm">Save Lead</button>
+                </div>
+
+                {(scoreProgressMap[idx] || 0) > 0 && (
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">Analyzing match...</div>
+                    <div className="h-2 rounded bg-gray-200 overflow-hidden">
+                      <div className="h-full bg-black transition-all" style={{ width: `${scoreProgressMap[idx]}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                {scoreMap[idx] && <ScoreCard score={scoreMap[idx]} />}
+              </div>
+            );
+          })}
         </div>
       </div>
     </main>
