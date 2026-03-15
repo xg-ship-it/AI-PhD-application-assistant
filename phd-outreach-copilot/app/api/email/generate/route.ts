@@ -76,6 +76,9 @@ async function generateWithMinimax(prompt: string) {
   if (!r.ok) {
     throw new Error(data?.base_resp?.status_msg || data?.error || `MiniMax HTTP ${r.status}`);
   }
+  if (data?.base_resp?.status_code && data.base_resp.status_code !== 0) {
+    throw new Error(`MiniMax error ${data.base_resp.status_code}: ${data?.base_resp?.status_msg || "unknown error"}`);
+  }
 
   const content =
     data?.choices?.[0]?.message?.content ||
