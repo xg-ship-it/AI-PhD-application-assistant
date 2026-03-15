@@ -100,6 +100,11 @@ export default function DiscoverPage() {
       emails: [],
     };
     upsertLead(lead);
+    fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lead),
+    }).catch(() => {});
     alert("Saved as lead");
   }
 

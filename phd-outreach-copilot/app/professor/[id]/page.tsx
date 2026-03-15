@@ -15,6 +15,13 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
   useEffect(() => {
     const leads = loadLeads();
     setLead(leads.find((x) => x.id === params.id) || null);
+
+    fetch(`/api/leads/${params.id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.lead) setLead(d.lead);
+      })
+      .catch(() => {});
   }, [params.id]);
 
   function persist(next: Lead) {
@@ -24,6 +31,12 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
     else leads.unshift(next);
     saveLeads(leads);
     setLead(next);
+
+    fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    }).catch(() => {});
   }
 
   function updateStatus(status: LeadStatus) {
@@ -76,6 +89,18 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
         updatedAt: now,
       };
       persist(nextLead);
+      fetch(`/api/leads/${lead.id}/emails`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: `${lead.id}-${type}-${Date.now()}`,
+          type,
+          subject: data.subject,
+          body: data.emailBody,
+          createdAt: now,
+          suggestedWaitDays: data.suggestedWaitDays,
+        }),
+      }).catch(() => {});
     } catch (e: any) {
       alert(e.message);
     } finally {

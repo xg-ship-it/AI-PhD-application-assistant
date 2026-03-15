@@ -17,6 +17,15 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setItems(loadLeads());
+    fetch("/api/leads")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d?.leads)) {
+          setItems(d.leads);
+          saveLeads(d.leads);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   function save(next: Lead[]) {
@@ -29,6 +38,11 @@ export default function DashboardPage() {
       it.id === id ? { ...it, status, updatedAt: new Date().toISOString() } : it
     );
     save(next);
+    fetch(`/api/leads/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    }).catch(() => {});
   }
 
   const grouped = useMemo(() => {

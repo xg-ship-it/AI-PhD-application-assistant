@@ -77,6 +77,13 @@ export default function HomePage() {
     };
 
     upsertLead(lead);
+
+    fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lead),
+    }).catch(() => {});
+
     setSavedLeadId(leadId);
     alert("Saved to dashboard");
   }
