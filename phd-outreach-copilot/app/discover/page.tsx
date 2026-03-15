@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Lead, makeLeadId, upsertLead } from "../lib/leads";
 
 type Candidate = {
@@ -21,11 +21,12 @@ type MatchScore = {
 };
 
 const QUICK_QUERIES = [
-  "NLP large language models UK",
-  "Computer vision medical imaging UK",
-  "Robotics and reinforcement learning Europe",
-  "Human computer interaction HCI UK",
-  "Cyber security privacy PhD supervisor UK",
+  "NLP UK PhD supervisor",
+  "Economics Europe PhD supervisor",
+  "Psychology US faculty profile",
+  "History UK faculty research",
+  "Law and technology PhD supervisor",
+  "Public health Canada faculty",
 ];
 
 const AREA_OPTIONS = [
@@ -35,10 +36,27 @@ const AREA_OPTIONS = [
   "Robotics",
   "HCI",
   "Security",
-  "Data Science",
+  "Economics",
+  "Finance",
+  "Management",
+  "Psychology",
+  "Sociology",
+  "Political Science",
+  "Education",
+  "Law",
+  "History",
+  "Philosophy",
+  "Literature",
+  "Linguistics",
+  "Public Health",
+  "Biology",
+  "Chemistry",
+  "Physics",
+  "Mathematics",
+  "Interdisciplinary",
 ];
 
-const REGION_OPTIONS = ["UK", "Europe", "US", "Canada", "Australia"];
+const REGION_OPTIONS = ["UK", "Europe", "US", "Canada", "Australia", "Asia", "Global"];
 
 function parseCsvText(csv: string): Candidate[] {
   const lines = csv
@@ -134,14 +152,31 @@ export default function DiscoverPage() {
   const [selectedArea, setSelectedArea] = useState(AREA_OPTIONS[0]);
   const [selectedRegion, setSelectedRegion] = useState(REGION_OPTIONS[0]);
 
-  const [applicantBackground, setApplicantBackground] = useState(
-    "I built multimodal models for chest X-ray report generation and have strong transformer/PyTorch experience."
-  );
-  const [targetProgram, setTargetProgram] = useState("PhD in Computer Science");
+  const [applicantBackground, setApplicantBackground] = useState("");
+  const [targetProgram, setTargetProgram] = useState("");
   const [loading, setLoading] = useState(false);
+  const [searchProgress, setSearchProgress] = useState(0);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [scoreMap, setScoreMap] = useState<Record<number, MatchScore>>({});
+  const [scoreProgressMap, setScoreProgressMap] = useState<Record<number, number>>({});
   const [sources, setSources] = useState<Array<{ title: string; url: string; source?: string }>>([]);
+  const [toast, setToast] = useState<string>("");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("applicant_profile_defaults");
+    if (!saved) return;
+    try {
+      const p = JSON.parse(saved);
+      if (p.applicantBackground) setApplicantBackground(p.applicantBackground);
+      if (p.targetProgram) setTargetProgram(p.targetProgram);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const queryHint = useMemo(
     () => `Example: ${selectedArea} ${selectedRegion} PhD supervisor`,
@@ -152,8 +187,22 @@ export default function DiscoverPage() {
     setQuery(`${selectedArea} ${selectedRegion} PhD supervisor`);
   }
 
+  function loadSampleProfile() {
+    setApplicantBackground(
+      "I am applying for a PhD and have research/project experience in the target area, including methods, experiments, and measurable outcomes."
+    );
+    setTargetProgram("PhD in relevant discipline");
+    setToast("Sample profile loaded");
+  }
+
   async function onSearch() {
     setLoading(true);
+    setSearchProgress(8);
+
+    const progressTimer = setInterval(() => {
+      setSearchProgress((p) => (p >= 90 ? p : p + Math.floor(Math.random() * 8) + 2));
+    }, 350);
+
     try {
       const r = await fetch("/api/discover/search", {
         method: "POST",
@@ -165,20 +214,37 @@ export default function DiscoverPage() {
       setCandidates(data.candidates || []);
       setSources(data.sourcesUsed || []);
       setScoreMap({});
+      setToast(`Found ${(data.candidates || []).length} candidates`);
     } catch (e: any) {
       alert(e.message);
     } finally {
-      setLoading(false);
+      clearInterval(progressTimer);
+      setSearchProgress(100);
+      setTimeout(() => {
+        setLoading(false);
+        setSearchProgress(0);
+      }, 250);
     }
   }
 
   async function scoreOne(c: Candidate, idx: number) {
+    setScoreProgressMap((m) => ({ ...m, [idx]: 10 }));
+    const timer = setInterval(() => {
+      setScoreProgressMap((m) => ({ ...m, [idx]: (m[idx] || 10) >= 90 ? 90 : (m[idx] || 10) + 6 }));
+    }, 220);
+
     const r = await fetch("/api/match/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ applicantBackground, targetProgram, professor: c }),
     });
     const data = await r.json();
+    clearInterval(timer);
+    setScoreProgressMap((m) => ({ ...m, [idx]: 100 }));
+    setTimeout(() => {
+      setScoreProgressMap((m) => ({ ...m, [idx]: 0 }));
+    }, 250);
+
     if (!r.ok) return alert(data.error || "score failed");
     setScoreMap((s) => ({ ...s, [idx]: data }));
   }
@@ -206,7 +272,7 @@ export default function DiscoverPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(lead),
     }).catch(() => {});
-    alert("Saved as lead");
+    setToast(`Saved lead: ${c.name}`);
   }
 
   async function onUploadCsv(file: File) {
@@ -217,7 +283,7 @@ export default function DiscoverPage() {
       return;
     }
     setCandidates((prev) => [...parsed, ...prev]);
-    alert(`Imported ${parsed.length} candidates from CSV`);
+    setToast(`Imported ${parsed.length} candidates from CSV`);
   }
 
   return (
@@ -231,8 +297,10 @@ export default function DiscoverPage() {
 
         <h1 className="text-2xl font-bold">Professor Discover + Match</h1>
 
+        {toast && <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded">{toast}</div>}
+
         <section className="bg-white rounded-xl shadow p-4 space-y-3">
-          <div className="text-sm font-medium">1) What do you want to search?</div>
+          <div className="text-sm font-medium">1) Search target professors (all disciplines supported)</div>
 
           <div className="grid md:grid-cols-3 gap-2">
             <select className="border rounded p-2" value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)}>
@@ -254,7 +322,7 @@ export default function DiscoverPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <div className="text-xs text-gray-500">Tip: 研究方向 + 国家/地区 + supervisor/faculty，例如 “NLP UK PhD supervisor”.</div>
+          <div className="text-xs text-gray-500">Input format: Research area + region + supervisor/faculty (e.g. “Economics UK PhD supervisor”).</div>
 
           <div className="flex gap-2 flex-wrap">
             {QUICK_QUERIES.map((x) => (
@@ -266,19 +334,33 @@ export default function DiscoverPage() {
         </section>
 
         <section className="bg-white rounded-xl shadow p-4 space-y-2">
-          <div className="text-sm font-medium">2) Your profile for match scoring</div>
+          <div className="text-sm font-medium">2) Profile for score matching (quick-fill supported)</div>
           <textarea
             className="w-full border rounded p-2 h-24"
-            placeholder="Write your background (projects, methods, results, publications)..."
+            placeholder="Briefly describe your background (projects/publications/methods/results)."
             value={applicantBackground}
             onChange={(e) => setApplicantBackground(e.target.value)}
           />
           <input
             className="w-full border rounded p-2"
-            placeholder="Target program, e.g. PhD in Computer Science"
+            placeholder="Target program (e.g. PhD in Economics / PhD in Psychology)."
             value={targetProgram}
             onChange={(e) => setTargetProgram(e.target.value)}
           />
+
+          <div className="flex gap-2 flex-wrap">
+            <button className="text-xs border rounded px-2 py-1" onClick={loadSampleProfile}>Use sample profile</button>
+            <button className="text-xs border rounded px-2 py-1" onClick={() => {
+              const saved = localStorage.getItem("applicant_profile_defaults");
+              if (!saved) return setToast("No profile found from Compose yet");
+              try {
+                const p = JSON.parse(saved);
+                if (p.applicantBackground) setApplicantBackground(p.applicantBackground);
+                if (p.targetProgram) setTargetProgram(p.targetProgram);
+                setToast("Loaded profile from Compose");
+              } catch {}
+            }}>Load from Compose</button>
+          </div>
 
           <div className="flex gap-3 items-center">
             <button onClick={onSearch} disabled={loading} className="bg-black text-white rounded px-4 py-2">
@@ -297,6 +379,15 @@ export default function DiscoverPage() {
               />
             </label>
           </div>
+
+          {loading && (
+            <div>
+              <div className="text-xs text-gray-600 mb-1">Searching the web and extracting professors...</div>
+              <div className="h-2 rounded bg-gray-200 overflow-hidden">
+                <div className="h-full bg-black transition-all" style={{ width: `${searchProgress}%` }} />
+              </div>
+            </div>
+          )}
         </section>
 
         {!!sources.length && (
@@ -324,6 +415,15 @@ export default function DiscoverPage() {
                 <button onClick={() => scoreOne(c, idx)} className="border rounded px-3 py-1 text-sm">Score Match</button>
                 <button onClick={() => saveCandidate(c, idx)} className="border rounded px-3 py-1 text-sm">Save Lead</button>
               </div>
+
+              {(scoreProgressMap[idx] || 0) > 0 && (
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">Analyzing match...</div>
+                  <div className="h-2 rounded bg-gray-200 overflow-hidden">
+                    <div className="h-full bg-black transition-all" style={{ width: `${scoreProgressMap[idx]}%` }} />
+                  </div>
+                </div>
+              )}
 
               {scoreMap[idx] && <ScoreCard score={scoreMap[idx]} />}
             </div>

@@ -42,6 +42,14 @@ export default function HomePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Request failed");
       setResult(data);
+      localStorage.setItem(
+        "applicant_profile_defaults",
+        JSON.stringify({
+          applicantBackground: form.applicantBackground,
+          targetProgram: form.targetProgram,
+          applicantName: form.applicantName,
+        })
+      );
     } catch (e: any) {
       alert(e.message);
     } finally {

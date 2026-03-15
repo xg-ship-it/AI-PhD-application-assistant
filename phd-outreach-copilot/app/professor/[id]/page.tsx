@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { Lead, LeadStatus, EmailType, formatStatusLabel, loadLeads, saveLeads } from "../../lib/leads";
 
 const STATUS_ORDER: LeadStatus[] = ["draft", "sent", "replied", "interview", "offer", "rejected"];
 
-export default function ProfessorDetailPage({ params }: { params: { id: string } }) {
+export default function ProfessorDetailPage() {
+  const params = useParams<{ id: string }>();
+  const leadId = typeof params?.id === "string" ? params.id : "";
   const [lead, setLead] = useState<Lead | null>(null);
   const [loadingFollowup, setLoadingFollowup] = useState<EmailType | null>(null);
   const [applicantBackground, setApplicantBackground] = useState(
@@ -13,16 +16,17 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
   );
 
   useEffect(() => {
+    if (!leadId) return;
     const leads = loadLeads();
-    setLead(leads.find((x) => x.id === params.id) || null);
+    setLead(leads.find((x) => x.id === leadId) || null);
 
-    fetch(`/api/leads/${params.id}`)
+    fetch(`/api/leads/${leadId}`)
       .then((r) => r.json())
       .then((d) => {
         if (d?.lead) setLead(d.lead);
       })
       .catch(() => {});
-  }, [params.id]);
+  }, [leadId]);
 
   function persist(next: Lead) {
     const leads = loadLeads();
