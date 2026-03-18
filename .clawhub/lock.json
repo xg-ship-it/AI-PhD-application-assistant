@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "productivity": {
+      "version": "1.0.3",
+      "installedAt": 1773149403484
+    },
+    "searching-assistant": {
+      "version": "0.1.0",
+      "installedAt": 1773149405859
+    },
+    "writing-assistant": {
+      "version": "0.1.0",
+      "installedAt": 1773149411412
+    },
+    "automation-workflows": {
+      "version": "0.1.0",
+      "installedAt": 1773149414940
+    },
+    "focus-deep-work": {
+      "version": "1.0.0",
+      "installedAt": 1773149423707
+    },
+    "ai-web-automation": {
+      "version": "1.0.0",
+      "installedAt": 1773149437378
+    },
+    "windows-ui-automation": {
+      "version": "1.0.0",
+      "installedAt": 1773149444669
+    },
+    "desktop-control-win": {
+      "version": "1.0.1",
+      "installedAt": 1773149448068
+    },
+    "win-mouse-native": {
+      "version": "1.0.0",
+      "installedAt": 1773149450451
+    }
+  }
+}
